@@ -31,7 +31,7 @@ CRM智能语音助手系统是一个集成了文本聊天、语音交互和客�
 └─────────────────┬───────────────────────────┘
                   │ HTTP请求
 ┌─────────────────▼───────────────────────────┐
-│           Flask API服务器 (5000端口)        │
+│           Flask API服务器 (8003端口)        │
 │            (app.py)                         │
 └─────┬────────────┬────────────┬─────────────┘
       │            │            │
@@ -57,87 +57,9 @@ CRM智能语音助手系统是一个集成了文本聊天、语音交互和客�
 * **语音服务** ：阿里云ASR/TTS
 * **部署方式** ：本地部署，支持Docker
 
-### 3. API接口文档
+### 3. 配置说明
 
-#### 3.1 文本聊天接口
-
-**http**
-
-```
-POST /chat
-Content-Type: application/json
-
-请求参数：
-{
-    "phone_number": "13800138000",
-    "query": "你们有什么产品？"
-}
-
-响应：
-{
-    "user_id": 1,
-    "is_new_user": false,
-    "intent": "A",
-    "response": "我们提供以下产品...",
-    "channel": "text",
-    "intent_description": "产品咨询-RAG检索",
-    "timestamp": "2024-01-01T12:00:00"
-}
-```
-
-#### 3.2 语音聊天接口
-
-**http**
-
-```
-POST /voice/chat
-Content-Type: multipart/form-data
-
-参数：
-phone_number: 13800138000
-audio: [音频文件]
-
-响应：
-- 音频格式：返回WAV格式音频
-- 文本格式：返回JSON包含识别文本和回复
-```
-
-#### 3.3 语音识别接口
-
-**http**
-
-```
-POST /voice/recognize
-Content-Type: multipart/form-data
-
-参数：
-audio: [音频文件]
-
-响应：
-{
-    "recognized_text": "你好，我想咨询产品",
-    "timestamp": "2024-01-01T12:00:00"
-}
-```
-
-#### 3.4 用户历史接口
-
-**http**
-
-```
-GET /user/{phone_number}/history
-
-响应：
-{
-    "phone_number": "13800138000",
-    "user_id": 1,
-    "conversation_history": [...]
-}
-```
-
-### 4. 配置说明
-
-#### 4.1 环境变量配置 (.env)
+#### 3.1 环境变量配置 (.env)
 
 **bash**
 
@@ -166,7 +88,7 @@ LLM_API_KEY=your_aliyun_llm_key
 LLM_MODEL=qwen-turbo
 ```
 
-#### 4.2 依赖安装
+#### 3.2 依赖安装
 
 **bash**
 
@@ -189,9 +111,9 @@ hmac
 hashlib
 ```
 
-### 5. 部署指南
+### 4. 部署指南
 
-#### 5.1 本地部署
+#### 4.1 本地部署
 
 **bash**
 
@@ -214,7 +136,7 @@ python app.py
 # 浏览器打开：http://localhost:7860
 ```
 
-#### 5.2 Docker部署
+#### 4.2 Docker部署
 
 **dockerfile**
 
@@ -229,13 +151,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV PORT=5000
-EXPOSE 5000 7860
+ENV PORT=8003
+EXPOSE 8003 7860
 
 CMD ["python", "app.py"]
 ```
 
-#### 5.3 服务管理
+#### 4.3 服务管理
 
 **bash**
 
@@ -258,9 +180,9 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-### 6. 意图识别逻辑
+### 5. 意图识别逻辑
 
-#### 6.1 意图分类
+#### 5.1 意图分类
 
 | 代码 | 类型     | 处理方式      |
 | ---- | -------- | ------------- |
@@ -268,30 +190,54 @@ WantedBy=multi-user.target
 | B    | 实时信息 | 网络搜索      |
 | C    | 常规问答 | 模型直接回复  |
 
-#### 6.2 识别流程
+#### 5.2 识别流程
 
 1. 用户输入文本
 2. LLM分析意图（A/B/C）
 3. 根据意图分派处理逻辑
 4. 生成相应回复
 
-### 7. 语音处理流程
+### 6. 语音处理流程
 
-#### 7.1 语音转文本（ASR）
+#### 6.1 语音转文本（ASR）
 
 ```
 用户语音 → 阿里云ASR → 识别文本 → 意图识别 → 生成回复
 ```
 
-#### 7.2 文本转语音（TTS）
+#### 6.2 文本转语音（TTS）
 
 ```
 文本回复 → 阿里云TTS → 音频文件 → 返回用户
 ```
 
-#### 7.3 音频格式要求
+#### 6.3 音频格式要求
 
 * 采样率：16000 Hz
 * 声道：单声道
 * 编码：PCM 16bit
 * 格式：WAV
+
+### 7.运行截图
+
+#### 7.1 状态检查
+
+![1767528308929](image/README/1767528308929.png)
+
+#### 7.2 聊天对话
+
+
+
+#### 7.3 用户历史
+
+老用户
+
+![1767528415970](image/README/1767528415970.png)
+
+新用户
+
+![1767532384231](image/README/1767532384231.png)
+
+#### 7.4 系统说明
+
+![1767530037581](image/README/1767530037581.png)
