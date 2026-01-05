@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # 导入项目模块
-from config import crm_config, voice_config
+from config import DATABASE_PATH, LLM_MODEL, HTTP_PORT, GRADIO_PORT,ASR_ACCESS_KEY_ID, TTS_ACCESS_KEY_ID, OPENAI_API_KEY, FASTAPI_PORT
 from database import init_database
 from response_engine import ResponseEngine
 
@@ -56,9 +56,9 @@ async def health_check():
         success=True,
         data={
             "status": "healthy",
-            "crm_model": crm_config.LLM_MODEL,
+            "crm_model": LLM_MODEL,
             "voice_capabilities": voice_caps,
-            "database": crm_config.DATABASE_PATH
+            "database": DATABASE_PATH
         },
         message="系统运行正常"
     )
@@ -182,16 +182,28 @@ async def generate_tts(text: str):
 # 启动函数
 def main():
     """启动FastAPI服务"""
+    def print_config_status():
+        """打印配置状态（替代原voice_config.print_config_status()）"""
+        print("="*60)
+        print("📝 配置状态检查")
+        print("="*60)
+        print(f"✅ 数据库路径: {DATABASE_PATH}")
+        print(f"✅ LLM模型: {LLM_MODEL}")
+        print(f"✅ ASR密钥配置: {'已配置' if ASR_ACCESS_KEY_ID else '缺失'}")
+        print(f"✅ TTS密钥配置: {'已配置' if TTS_ACCESS_KEY_ID else '缺失'}")
+        print(f"✅ OpenAI API Key: {'已配置' if OPENAI_API_KEY else '缺失'}")
+        print(f"✅ 端口配置 - HTTP: {HTTP_PORT}, Gradio: {GRADIO_PORT}, FastAPI: {FASTAPI_PORT}")
+        print("="*60)
+
     # 打印配置状态
-    voice_config.print_config_status()
+    print_config_status()
     
     # 获取端口配置
-    server_config = voice_config.get_server_config()
-    port = server_config["fastapi_port"]
+    port = FASTAPI_PORT
     
-    print(f"\n🚀 CRM智能语音客服系统启动中...")
-    print(f"📡 API地址: http://0.0.0.0:{port}")
-    print(f"📖 API文档: http://0.0.0.0:{port}/docs")
+    print(f"\n CRM智能语音客服系统启动中...")
+    print(f" API地址: http://0.0.0.0:{port}")
+    print(f" API文档: http://0.0.0.0:{port}/docs")
     
     # 启动服务
     uvicorn.run(
