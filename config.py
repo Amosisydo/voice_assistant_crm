@@ -28,3 +28,17 @@ ALIYUN_LLM_MODEL = os.getenv("LLM_MODEL", "qwen-turbo")
 HTTP_PORT = int(os.getenv("SERVER_HTTP_PORT", "8003"))
 GRADIO_PORT = int(os.getenv("GRADIO_PORT", "7860"))
 FASTAPI_PORT = int(os.getenv("FASTAPI_PORT", "8000"))
+
+# RAG配置
+RAG_DOCUMENTS_PATH = os.path.join(BASE_DIR, 'documents')
+VECTOR_STORE_PATH = os.path.join(BASE_DIR, 'vector_store')
+EMBEDDING_MODEL = "text-embedding-ada-002"
+OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://api.siliconflow.cn/v1")
+
+# 网络搜索工具配置
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+MAX_SEARCH_RESULTS = int(os.getenv("MAX_SEARCH_RESULTS", 3))
+
+# 工具启用开关
+ENABLE_RAG = os.getenv("ENABLE_RAG", "True").lower() == "true"
+ENABLE_WEB_SEARCH = os.getenv("ENABLE_WEB_SEARCH", "True").lower() == "true"
