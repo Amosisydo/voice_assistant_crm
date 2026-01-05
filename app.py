@@ -1,3 +1,4 @@
+import asyncio
 from flask import Flask, request, jsonify, send_file
 from datetime import datetime
 import logging
@@ -9,6 +10,7 @@ from response_engine import ResponseEngine
 from database import init_database, UserManager
 from config import LLM_MODEL, HTTP_PORT, GRADIO_PORT
 from voice_processor import VoiceProcessor
+from functools import wraps
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +23,14 @@ init_database()
 
 # 初始化语音处理器
 voice_processor = VoiceProcessor()
+
+
+
+def async_to_sync(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        return asyncio.run(f(*args, **kwargs))
+    return wrapper
 
 def start_gradio_interface():
     """在后台线程中启动Gradio界面"""
@@ -69,6 +79,7 @@ def chat_api():
         }), 500
 
 @app.route('/voice/chat', methods=['POST'])
+@async_to_sync
 async def voice_chat_api():
     """语音聊天API接口"""
     try:
