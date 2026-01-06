@@ -335,7 +335,7 @@ class IntegratedCRMInterface:
     
     def create_integrated_interface(self):
         """创建整合的界面"""
-        with gr.Blocks(title="CRM聊天系统") as interface:
+        with gr.Blocks(title="CRM聊天系统", theme=gr.themes.Soft()) as interface:
             
             gr.Markdown("# CRM聊天系统")
             
@@ -352,7 +352,8 @@ class IntegratedCRMInterface:
                     
                     chatbot = gr.Chatbot(
                         height=400,
-                        label="对话记录"
+                        label="对话记录",
+                        type="messages"
                     )
                     
                     # 输入方式标签页
@@ -472,8 +473,7 @@ class IntegratedCRMInterface:
             server_port=GRADIO_PORT,
             share=share,
             inbrowser=inbrowser,
-            quiet=quiet,
-            theme=gr.themes.Soft()
+            quiet=quiet
         )
 
 def run_gradio_interface():
