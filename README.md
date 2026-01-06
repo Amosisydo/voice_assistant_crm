@@ -113,7 +113,7 @@ hashlib
 
 ### 4. 部署指南
 
-#### 4.1 本地部署
+#### 本地部署
 
 **bash**
 
@@ -134,50 +134,11 @@ python app.py
 
 # 5. 访问Web界面
 # 浏览器打开：http://localhost:7860
-```
 
-#### 4.2 Docker部署
-
-**dockerfile**
-
-```
-# Dockerfile
-FROM python:3.9-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-ENV PORT=8003
-EXPOSE 8003 7860
-
-CMD ["python", "app.py"]
-```
-
-#### 4.3 服务管理
-
-**bash**
-
-```
-# 使用systemd管理服务
-# /etc/systemd/system/crm-voice.service
-[Unit]
-Description=CRM Voice Assistant
-After=network.target
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/path/to/crm-voice-assistant
-EnvironmentFile=/path/to/.env
-ExecStart=/usr/bin/python3 app.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
+# 6.可以运行测试脚本test\test_api_with_audio.py进行测试
+# test目录下
+test\create_test_audio.py  运行后在test_audio_local目录下生成测试语音
+test\test_api_with_audio.py   运行后生成文件夹response_audio，并在文件夹里保存机器人的聊天语音
 ```
 
 ### 5. 意图识别逻辑
