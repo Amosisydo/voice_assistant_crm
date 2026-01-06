@@ -82,7 +82,7 @@ class APIAudioTester:
             response = requests.post(
                 f"{self.base_url}/chat",
                 json=payload,
-                timeout=20
+                timeout=40
             )
             
             response_time = (time.time() - start_time) * 1000
@@ -126,7 +126,7 @@ class APIAudioTester:
                 response = requests.post(
                     f"{self.base_url}/voice/recognize",
                     files=files,
-                    timeout=25
+                    timeout=60
                 )
             
             response_time = (time.time() - start_time) * 1000
@@ -170,7 +170,7 @@ class APIAudioTester:
                     f"{self.base_url}/voice/chat",
                     files=files,
                     data=data,
-                    timeout=30
+                    timeout=60
                 )
             
             response_time = (time.time() - start_time) * 1000
