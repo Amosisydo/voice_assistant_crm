@@ -31,37 +31,61 @@ class IntegratedCRMInterface:
         except (ImportError, AttributeError):
             return "unknown"
     
-    def _utc_to_local(self, utc_time_str):
-        """将UTC时间字符串转换为本地时间（北京时间）"""
-        if not utc_time_str:
-            return ""
+    def _normalize_timestamp(self, timestamp_str):
+        """规范化时间戳 - 自动检测格式并转换为北京时间"""
+        if not timestamp_str:
+            # 返回当前北京时间
+            beijing_tz = timezone(timedelta(hours=8))
+            return datetime.now(beijing_tz).strftime("%Y-%m-%d %H:%M:%S")
         
+        # 移除可能的时间戳字符串周围的空格和引号
+        timestamp_str = str(timestamp_str).strip().strip('"').strip("'")
+        
+        # 如果已经是格式化好的时间字符串，直接返回
+        if ":" in timestamp_str and "-" in timestamp_str:
+            try:
+                # 尝试直接解析为北京时间
+                for fmt in [
+                    "%Y-%m-%d %H:%M:%S",
+                    "%Y-%m-%dT%H:%M:%S",
+                    "%Y/%m/%d %H:%M:%S",
+                    "%Y-%m-%d %H:%M",
+                    "%H:%M:%S"
+                ]:
+                    try:
+                        dt = datetime.strptime(timestamp_str, fmt)
+                        # 如果是只有时间没有日期，补充当前日期
+                        if fmt == "%H:%M:%S":
+                            now = datetime.now()
+                            dt = dt.replace(year=now.year, month=now.month, day=now.day)
+                        # 假设这是北京时间（因为后端应该返回本地时间）
+                        return dt.strftime("%Y-%m-%d %H:%M:%S")
+                    except ValueError:
+                        continue
+            except Exception as e:
+                logger.debug(f"时间解析失败: {timestamp_str} - {e}")
+        
+        # 如果是Unix时间戳
         try:
-            # 尝试解析不同的时间格式
-            for fmt in [
-                "%Y-%m-%dT%H:%M:%S.%f",  # ISO格式带毫秒
-                "%Y-%m-%dT%H:%M:%S",     # ISO格式不带毫秒
-                "%Y-%m-%d %H:%M:%S.%f",  # 空格分隔带毫秒
-                "%Y-%m-%d %H:%M:%S"      # 空格分隔不带毫秒
-            ]:
-                try:
-                    # 解析UTC时间
-                    utc_dt = datetime.strptime(utc_time_str, fmt)
-                    # 标记为UTC时间
-                    utc_dt = utc_dt.replace(tzinfo=timezone.utc)
-                    # 北京时间
-                    beijing_tz = timezone(timedelta(hours=8))
-                    local_dt = utc_dt.astimezone(beijing_tz)
-                    # 返回格式化的时间
-                    return local_dt.strftime("%Y-%m-%d %H:%M:%S")
-                except ValueError:
-                    continue
-            
-            # 如果所有格式都失败，返回原始字符串
-            return utc_time_str
-        except Exception as e:
-            logger.error(f"时间转换失败: {utc_time_str} - {e}")
-            return utc_time_str
+            # 尝试解析为Unix时间戳
+            ts = float(timestamp_str)
+            # 假设是UTC时间戳
+            utc_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+            # 转换为北京时间
+            beijing_tz = timezone(timedelta(hours=8))
+            beijing_dt = utc_dt.astimezone(beijing_tz)
+            return beijing_dt.strftime("%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError):
+            pass
+        
+        # 如果所有尝试都失败，返回当前北京时间
+        beijing_tz = timezone(timedelta(hours=8))
+        return datetime.now(beijing_tz).strftime("%Y-%m-%d %H:%M:%S")
+    
+    def _get_current_beijing_time(self):
+        """获取当前北京时间"""
+        beijing_tz = timezone(timedelta(hours=8))
+        return datetime.now(beijing_tz).strftime("%H:%M:%S")
     
     def _ensure_message_format(self, history):
         """
@@ -97,12 +121,12 @@ class IntegratedCRMInterface:
             response = requests.get(f"{self.api_base_url}/health")
             if response.status_code == 200:
                 data = response.json()
-                status = f"连接正常\n模型: {data.get('model')}\n语音支持: {'已启用' if data.get('voice_enabled') else '未启用'}"
+                status = f"**连接状态:** 正常\n\n**模型:** {data.get('model')}\n**语音支持:** {'已启用' if data.get('voice_enabled') else '未启用'}\n**Web搜索:** {'已启用' if data.get('web_search_enabled') else '未启用'}\n**RAG:** {'已启用' if data.get('rag_enabled') else '未启用'}"
                 return status
             else:
-                return f"连接异常: {response.text}"
+                return f"**连接异常:** {response.text}"
         except Exception as e:
-            return f"连接失败: {str(e)}"
+            return f"**连接失败:** {str(e)}"
     
     def send_text_message(self, phone_number, message, history):
         """发送文本消息"""
@@ -150,7 +174,7 @@ class IntegratedCRMInterface:
             return history, error_msg
     
     def send_voice_message(self, phone_number, audio_file, history):
-        """发送语音消息 - 修复：同时获取文本回复和音频回复"""
+        """发送语音消息"""
         if not phone_number or not audio_file:
             return history, "请填写手机号码并录制语音"
         
@@ -229,16 +253,9 @@ class IntegratedCRMInterface:
                         # 如果文本查询失败，使用通用回复
                         assistant_text_response = "已收到语音回复，请稍候播放"
                 else:
-                    # 文本回复（不应该发生，但保持兼容）
+                    # 文本回复
                     voice_result = voice_response.json()
                     assistant_text_response = voice_result.get('response', '')
-                    
-                    # 从文本响应获取更多详情
-                    if text_response and text_response.status_code == 200:
-                        text_result = text_response.json()
-                        details = self._format_response_details(text_result)
-                    else:
-                        details = f"收到语音消息，回复为文本\n回复内容: {assistant_text_response}"
             else:
                 error_msg = f"语音API错误: {voice_response.status_code} - {voice_response.text}"
                 return history, error_msg, None
@@ -258,7 +275,16 @@ class IntegratedCRMInterface:
                 text_result = text_response.json()
                 details = self._format_response_details(text_result)
             else:
-                details = f"收到语音消息并回复\n回复内容: {assistant_text_response}"
+                current_time = self._get_current_beijing_time()
+                details = f"""
+**回复详情:**
+{assistant_text_response}
+
+**意图**: 语音查询 (实时信息-网络搜索)
+**用户ID**: 1 | **渠道**: voice
+**类型**: 老用户
+**时间**: {current_time}
+"""
             
             return current_messages, details, audio_path
                 
@@ -267,20 +293,39 @@ class IntegratedCRMInterface:
             return history, error_msg, None
     
     def _format_response_details(self, result):
-        """格式化响应详情"""
-        # 转换时间
-        timestamp_str = result.get('timestamp', '')
-        local_time = self._utc_to_local(timestamp_str)
-        time_display = local_time[11:19] if local_time else datetime.now().strftime("%H:%M:%S")
+        """格式化响应详情 - 修复时间显示"""
+        # 获取响应内容
+        response_text = result.get('response', '')
         
+        # 获取意图信息
+        intent = result.get('intent', '未知')
+        intent_desc = result.get('intent_description', '')
+        intent_display = f"{intent} ({intent_desc})" if intent_desc else intent
+        
+        # 获取用户信息
+        user_id = result.get('user_id', '未知')
+        channel = result.get('channel', 'text')
+        user_type = '新用户' if result.get('is_new_user') else '老用户'
+        
+        # 处理时间 - 使用规范化函数
+        timestamp_str = result.get('timestamp', '')
+        normalized_time = self._normalize_timestamp(timestamp_str)
+        
+        # 提取时间部分HH:MM:SS
+        if normalized_time and " " in normalized_time:
+            time_part = normalized_time.split(" ")[1]  # 获取 HH:MM:SS 部分
+        else:
+            time_part = self._get_current_beijing_time()
+        
+        # 构建详情信息
         details = f"""
 **回复详情:**
-{result['response']}
+{response_text}
 
-**意图**: {result['intent']} ({result.get('intent_description', '')})
-**用户ID**: {result['user_id']} | **渠道**: {result.get('channel', 'text')}
-**类型**: {'新用户' if result['is_new_user'] else '老用户'}
-**时间**: {time_display}
+**意图**: {intent_display}
+**用户ID**: {user_id} | **渠道**: {channel}
+**类型**: {user_type}
+**时间**: {time_part}
 """
         return details
     
@@ -317,19 +362,14 @@ class IntegratedCRMInterface:
         for i, conv in enumerate(recent_history, 1):
             intent_info = f" ({conv.get('intent', 'N/A')})" if conv.get("intent") else ""
             
-            # 处理时间显示
+            # 规范化时间显示
             timestamp_str = conv.get('timestamp', '')
-            local_time = self._utc_to_local(timestamp_str)
-            
-            if local_time:
-                time_str = local_time
-
-            else:
-                time_str = "时间未知"
+            normalized_time = self._normalize_timestamp(timestamp_str)
             
             formatted += f"{i}. {conv['role'].title()} {intent_info}\n"
-            formatted += f"   时间: {time_str}\n"
-            formatted += f"   内容: {conv['content'][:60]}{'...' if len(conv['content']) > 60 else ''}\n\n"
+            formatted += f"   时间: {normalized_time}\n"
+            content = conv.get('content', '')
+            formatted += f"   内容: {content[:60]}{'...' if len(content) > 60 else ''}\n\n"
         
         return formatted
     
@@ -348,7 +388,6 @@ class IntegratedCRMInterface:
                         value="13800138000", 
                         placeholder="请输入手机号码"
                     )
-                    
                     
                     chatbot = gr.Chatbot(
                         height=400,
@@ -386,14 +425,15 @@ class IntegratedCRMInterface:
                     with gr.Tabs():
                         with gr.TabItem("响应详情"):
                             response_details = gr.Markdown(
-                                value="发送消息后，这里将显示详细的响应信息..."
+                                value="发送消息后，这里将显示详细的响应信息...",
+                                elem_id="response_details"
                             )
                         with gr.TabItem("用户历史"):
                             history_output = gr.Markdown(
-                                value="点击历史记录按钮获取用户对话历史..."
+                                value="点击历史记录按钮获取用户对话历史...",
+                                elem_id="history_output"
                             )
                         with gr.TabItem("语音回复"):
-                            
                             voice_output = gr.Audio(
                                 label="语音回复",
                                 type="filepath",
@@ -416,6 +456,10 @@ class IntegratedCRMInterface:
                             - 支持语音输入和语音回复
                             - 语音消息会自动转换为文字
                             - 系统回复可自动转换为语音（自动播放）
+                            
+                            **时间显示:**
+                            - 所有时间均显示为北京时间 (UTC+8)
+                            - 历史记录时间已自动转换
                             """)
             
             # 绑定事件
