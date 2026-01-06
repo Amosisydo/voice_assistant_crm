@@ -58,7 +58,7 @@ class IntegratedCRMInterface:
                         if fmt == "%H:%M:%S":
                             now = datetime.now()
                             dt = dt.replace(year=now.year, month=now.month, day=now.day)
-                        # 假设这是北京时间（因为后端应该返回本地时间）
+                        # 假设这是北京时间
                         return dt.strftime("%Y-%m-%d %H:%M:%S")
                     except ValueError:
                         continue
@@ -311,7 +311,7 @@ class IntegratedCRMInterface:
         timestamp_str = result.get('timestamp', '')
         normalized_time = self._normalize_timestamp(timestamp_str)
         
-        # 提取时间部分HH:MM:SS
+        # 提取时间部分（HH:MM:SS）
         if normalized_time and " " in normalized_time:
             time_part = normalized_time.split(" ")[1]  # 获取 HH:MM:SS 部分
         else:
