@@ -1,5 +1,7 @@
 import os
 import logging
+import re
+import datetime
 from typing import List, Optional, Dict, Any
 from langchain.tools import Tool
 from config import TAVILY_API_KEY, MAX_SEARCH_RESULTS, ENABLE_WEB_SEARCH
@@ -26,190 +28,228 @@ class WebSearchTools:
             return
         
         try:
-            os.environ['TAVILY_API_KEY'] = TAVILY_API_KEY
-            
-            # 配置Tavily参数，要求直接返回答案+深度搜索
-            self.tavily_search = TavilySearch(
-                max_results=MAX_SEARCH_RESULTS,
-                search_depth="deep",  # 深度搜索，获取更精准结果
-                include_answer=True,   # 要求Tavily直接返回总结性答案
-                include_raw_content=True,  # 包含原始内容，便于提取核心信息
-                include_images=False,
-                api_key=TAVILY_API_KEY
-            )
+            # 初始化Tavily
+            self.tavily_search = TavilySearch(max_results=MAX_SEARCH_RESULTS)
             
             # 创建工具列表
             self.tools = [
                 Tool(
                     name="WebSearch",
-                    func=self._general_search,
-                    description="通用网络搜索，用于获取最新的市场信息、新闻、价格等实时数据"
+                    func=self._simple_search,
+                    description="通用网络搜索"
                 ),
                 Tool(
                     name="WeatherSearch",
-                    func=self._weather_search,
-                    description="天气查询，用于获取指定地区的实时气温、天气状况、风力、湿度等精准数据"
+                    func=self._robust_weather_search,
+                    description="天气查询，获取实时天气信息"
                 ),
                 Tool(
                     name="NewsSearch",
-                    func=self._news_search,
-                    description="新闻搜索，用于获取最新的新闻和时事信息"
+                    func=self._simple_search,
+                    description="新闻搜索"
                 ),
                 Tool(
                     name="PriceSearch",
-                    func=self._price_search,
-                    description="价格查询，用于获取商品价格、市场行情等信息"
+                    func=self._simple_search,
+                    description="价格查询"
                 )
             ]
             
             logger.info(f"Web搜索工具初始化成功，共 {len(self.tools)} 个工具")
             
-        except ImportError:
-            logger.warning("Tavily搜索库未安装，请运行: pip install tavily-python")
         except Exception as e:
             logger.error(f"Web搜索工具初始化失败: {e}")
+            self.tavily_search = None
     
-    def _general_search(self, query: str) -> str:
-        """通用网络搜索"""
+    def _simple_search(self, query: str) -> str:
+        """简单稳定的搜索"""
         try:
             if not self.tavily_search:
-                return "Web搜索功能暂不可用"
+                return "搜索功能暂不可用"
             
-            # 执行搜索
-            results = self.tavily_search.invoke({
-                "query": query,
-                "search_depth": "deep",
-                "include_answer": True
-            })
+            # 直接运行搜索，不做复杂处理
+            result = self.tavily_search.run(query)
             
-            # 优先提取Tavily的直接答案
-            final_result = self._extract_core_info(results, query_type="general")
-            return self._format_search_results(final_result, prefix="")
+            # 安全处理结果
+            if result is None:
+                return f"未找到关于'{query}'的信息。"
+            
+            result_str = str(result)
+            
+            # 限制长度
+            if len(result_str) > 500:
+                return result_str[:497] + "..."
+            
+            return result_str
             
         except Exception as e:
-            logger.error(f"通用搜索失败: {e}")
+            logger.error(f"搜索失败: {e}")
             return f"搜索失败: {str(e)}"
     
-    def _weather_search(self, location: str) -> str:
+    def _robust_weather_search(self, location: str) -> str:
         """天气搜索"""
         try:
+            logger.info(f"开始天气搜索: {location}")
+            
             if not self.tavily_search:
                 return "天气搜索功能暂不可用"
             
-            # 优化关键词：指定日期、核心维度（实时气温、天气状况、风力、湿度）
-            import datetime
-            today = datetime.date.today().strftime("%Y年%m月%d日")
-            precise_query = f"{today} {location} 实时天气 气温 天气状况 湿度 风力 空气质量"
+            # 方案1: 尝试专业查询
+            weather_info = self._try_professional_weather_query(location)
+            if weather_info and "失败" not in weather_info and "暂不可用" not in weather_info:
+                return weather_info
             
-            # 执行精准搜索
-            results = self.tavily_search.invoke({
-                "query": precise_query,
-                "search_depth": "deep",
-                "include_answer": True  # 要求Tavily直接返回总结答案
-            })
+            # 方案2: 尝试简单查询
+            weather_info = self._try_simple_weather_query(location)
+            if weather_info and "失败" not in weather_info and "暂不可用" not in weather_info:
+                return weather_info
             
-            # 提取天气核心信息（温度、天气、风力等）
-            final_result = self._extract_core_info(results, query_type="weather")
-            return self._format_search_results(final_result, prefix=f"{location}今日天气：")
+            # 方案3: 使用备用方案
+            return self._fallback_weather_info(location)
             
         except Exception as e:
             logger.error(f"天气搜索失败: {e}")
-            return f"天气查询失败: {str(e)}"
+            return f"无法获取{location}的天气信息，请稍后再试。"
     
-    def _news_search(self, topic: str) -> str:
-        """新闻搜索（优化关键词）"""
+    def _try_professional_weather_query(self, location: str) -> str:
+        """尝试专业天气查询"""
         try:
-            if not self.tavily_search:
-                return "新闻搜索功能暂不可用"
+            today = datetime.datetime.now().strftime("%Y-%m-%d")
+            query = f"{today} {location} 天气 实时 气温 湿度 风力"
             
-            # 优化关键词：指定时间范围、核心要素
-            precise_query = f"{topic} 最新新闻 2026 核心内容 摘要 来源"
-            results = self.tavily_search.invoke({
-                "query": precise_query,
-                "search_depth": "deep",
-                "include_answer": True
-            })
+            logger.debug(f"专业查询: {query}")
+            result = self.tavily_search.run(query)
             
-            final_result = self._extract_core_info(results, query_type="news")
-            return self._format_search_results(final_result, prefix=f"{topic}最新新闻：")
+            if not result:
+                return ""
+            
+            # 转换为字符串并安全处理
+            result_str = str(result) if result else ""
+            
+            # 提取天气信息
+            weather_data = self._parse_weather_from_text(result_str, location)
+            if weather_data:
+                return weather_data
+            
+            # 如果无法解析，返回原始结果
+            if len(result_str) > 300:
+                return f" {location}天气信息：{result_str[:297]}..."
+            return f" {location}天气信息：{result_str}"
             
         except Exception as e:
-            logger.error(f"新闻搜索失败: {e}")
-            return f"新闻搜索失败: {str(e)}"
+            logger.debug(f"专业查询失败: {e}")
+            return ""
     
-    def _price_search(self, product: str) -> str:
-        """价格搜索（优化关键词）"""
+    def _try_simple_weather_query(self, location: str) -> str:
+        """尝试简单天气查询"""
         try:
-            if not self.tavily_search:
-                return "价格搜索功能暂不可用"
+            query = f"{location} 今天天气"
             
-            # 优化关键词：指定实时、核心价格维度
-            precise_query = f"{product} 实时价格 2026 市场价 报价 优惠活动"
-            results = self.tavily_search.invoke({
-                "query": precise_query,
-                "search_depth": "deep",
-                "include_answer": True
-            })
+            logger.debug(f"简单查询: {query}")
+            result = self.tavily_search.run(query)
             
-            final_result = self._extract_core_info(results, query_type="price")
-            return self._format_search_results(final_result, prefix=f"{product}价格信息：")
+            if not result:
+                return ""
+            
+            result_str = str(result) if result else ""
+            
+            # 检查是否包含天气关键词
+            weather_keywords = ['天气', '气温', '温度', '度', '晴', '雨', '云', '风']
+            if any(keyword in result_str for keyword in weather_keywords):
+                if len(result_str) > 200:
+                    return f" {location}天气：{result_str[:197]}..."
+                return f" {location}天气：{result_str}"
+            
+            return ""
             
         except Exception as e:
-            logger.error(f"价格搜索失败: {e}")
-            return f"价格查询失败: {str(e)}"
+            logger.debug(f"简单查询失败: {e}")
+            return ""
     
-    def _extract_core_info(self, results: Any, query_type: str) -> str:
-        """提取核心信息"""
-        # 优先使用Tavily直接返回的答案
-        if isinstance(results, dict) and results.get('answer'):
-            return results['answer']
+    def _parse_weather_from_text(self, text: str, location: str) -> str:
+        """从文本中解析天气信息"""
+        if not text or not isinstance(text, str):
+            return ""
         
-        # 处理列表格式的结果，提取核心信息
-        core_info = ""
-        if isinstance(results, list):
-            for result in results[:MAX_SEARCH_RESULTS]:
-                if isinstance(result, dict):
-                    # 提取核心内容
-                    content = result.get('content', '') or result.get('raw_content', '')
-                    core_info += content + "\n\n"
+        # 确保text是字符串
+        text_str = str(text)
         
-        # 针对不同类型做结构化提取
-        if query_type == "weather":
-            # 提取天气核心数据的关键词
-            import re
-            # 匹配温度（如 15℃、20度、气温18℃）
-            temp_match = re.search(r'(\d{1,2})[℃度]', core_info)
-            # 匹配天气状况（晴、多云、阴、小雨、大雨）
-            weather_match = re.search(r'(晴|多云|阴|小雨|中雨|大雨|暴雨|雪|雾|雷阵雨)', core_info)
-            # 匹配风力（如 微风、3级、东风2级）
-            wind_match = re.search(r'([东西南北]风\s*\d*级|微风|无风|阵风)', core_info)
+        # 查找温度信息
+        temp_match = None
+        temp_patterns = [
+            r'(\d+)\s*[℃°C度]',
+            r'气温[：:]\s*(\d+)',
+            r'温度[：:]\s*(\d+)'
+        ]
+        
+        for pattern in temp_patterns:
+            match = re.search(pattern, text_str)
+            if match:
+                temp_match = match
+                break
+        
+        # 查找天气状况
+        weather_match = None
+        weather_keywords = ['晴', '多云', '阴', '雨', '小雨', '中雨', '大雨', '雪', '雾']
+        for keyword in weather_keywords:
+            if keyword in text_str:
+                weather_match = keyword
+                break
+        
+        # 查找风力
+        wind_match = None
+        wind_patterns = [
+            r'([东南西北]风\s*\d*级)',
+            r'风力[：:]\s*([^，。\n]+)',
+            r'风[：:]\s*([^，。\n]+)'
+        ]
+        
+        for pattern in wind_patterns:
+            match = re.search(pattern, text_str)
+            if match:
+                wind_match = match.group(1)
+                break
+        
+        # 构建结果
+        if temp_match or weather_match or wind_match:
+            result = f" {location}当前天气：\n"
             
-            # 结构化天气信息
-            structured_weather = []
             if temp_match:
-                structured_weather.append(f"气温：{temp_match.group(1)}℃")
-            if weather_match:
-                structured_weather.append(f"天气：{weather_match.group(1)}")
-            if wind_match:
-                structured_weather.append(f"风力：{wind_match.group(1)}")
+                temp_value = temp_match.group(1)
+                result += f" 温度：{temp_value}°C\n"
             
-            if structured_weather:
-                core_info = "，".join(structured_weather)
-            else:
-                core_info = core_info[:300]  # 无结构化信息则取前300字
+            if weather_match:
+                result += f" 天气：{weather_match}\n"
+            
+            if wind_match:
+                result += f" 风力：{wind_match}\n"
+            
+            # 添加时间
+            current_time = datetime.datetime.now().strftime("%H:%M")
+            result += f" 更新时间：{current_time}"
+            
+            return result
         
-        return core_info.strip() or "未找到精准的核心信息"
+        return ""
     
-    def _format_search_results(self, results: Any, prefix: str = "") -> str:
-        """格式化搜索结果（优化版：优先核心信息）"""
-        if not results:
-            return "未找到相关信息。"
-        
-        # 如果是字符串且已有核心信息，直接返回
-        if isinstance(results, str):
-            return f"{prefix}{results}" if prefix else results
-        
-        return f"{prefix}暂无精准数据，请参考以下信息：\n{str(results)[:500]}" if prefix else str(results)[:500]
+    def _fallback_weather_info(self, location: str) -> str:
+        """备用天气信息"""
+        try:
+            # 尝试直接搜索
+            query = f"{location} weather"
+            result = self.tavily_search.run(query)
+            
+            if result:
+                result_str = str(result)
+                if len(result_str) > 100:
+                    return f" {location}天气信息：{result_str[:100]}..."
+                return f" {location}天气信息：{result_str}"
+            
+            # 最终备用
+            return f" 暂时无法获取{location}的详细天气信息。\n建议使用天气APP或查看中国天气网获取实时信息。"
+            
+        except Exception:
+            return f" 暂时无法获取{location}的天气信息，请稍后再试。"
     
     def get_tools(self) -> List[Tool]:
         """获取所有可用的工具"""
@@ -223,7 +263,7 @@ class WebSearchTools:
                     return tool.func(query)
             
             # 如果没有找到指定工具，使用通用搜索
-            return self._general_search(query)
+            return self._simple_search(query)
             
         except Exception as e:
             logger.error(f"工具搜索失败: {e}")
