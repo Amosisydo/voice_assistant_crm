@@ -30,9 +30,9 @@ GRADIO_PORT = int(os.getenv("GRADIO_PORT", "7860"))
 FASTAPI_PORT = int(os.getenv("FASTAPI_PORT", "8000"))
 
 # RAG配置
-RAG_DOCUMENTS_PATH = os.path.join(BASE_DIR, 'documents')
+RAG_DOCUMENTS_PATH = os.path.join(BASE_DIR, 'data_documents')
 VECTOR_STORE_PATH = os.path.join(BASE_DIR, 'vector_store')
-EMBEDDING_MODEL = "text-embedding-ada-002"
+EMBEDDING_MODEL = "BAAI/bge-m3"
 OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://api.siliconflow.cn/v1")
 
 # 网络搜索工具配置
