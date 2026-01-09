@@ -3,10 +3,10 @@ import sys
 sys.path.append('.')
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
-from config import RAG_DOCUMENTS_PATH, VECTOR_STORE_PATH, OPENAI_API_BASE, EMBEDDING_MODEL, OPENAI_API_KEY
+from config import RAG_DOCUMENTS_PATH, VECTOR_STORE_PATH, API_BASE, EMBEDDING_MODEL, OPENAI_API_KEY
 
 print("[RAG] 开始初始化RAG系统...")
 
@@ -79,7 +79,7 @@ def get_rag_processor():
         # 初始化嵌入模型
         print(f"[RAG] 初始化嵌入模型，使用: {EMBEDDING_MODEL}")
         embeddings = OpenAIEmbeddings(
-            openai_api_base=OPENAI_API_BASE,
+            openai_api_base=API_BASE,
             openai_api_key=OPENAI_API_KEY,
             model=EMBEDDING_MODEL
         )
@@ -98,7 +98,7 @@ def get_rag_processor():
             embedding=embeddings,
             persist_directory=VECTOR_STORE_PATH
         )
-        vector_store.persist()
+        
         
         # 创建检索器
         retriever = vector_store.as_retriever(

@@ -1,6 +1,6 @@
 import logging
 import openai
-from config import (OPENAI_API_KEY, SILICONFLOW_API_BASE, LLM_MODEL, LLM_TEMPERATURE, 
+from config import (OPENAI_API_KEY, API_BASE, LLM_MODEL, LLM_TEMPERATURE, 
                     ENABLE_RAG,ENABLE_WEB_SEARCH, RAG_DOCUMENTS_PATH, VECTOR_STORE_PATH,
                     EMBEDDING_MODEL, TAVILY_API_KEY)
 from database import UserManager
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # 配置OpenAI客户端
 client = openai.OpenAI(
     api_key=OPENAI_API_KEY,
-    base_url=SILICONFLOW_API_BASE
+    base_url=API_BASE
 )
 
 class ResponseEngine:

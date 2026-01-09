@@ -1,0 +1,377 @@
+{
+  "info": {
+    "name": "CRM智能语音助手系统API测试集合",
+    "description": "包含系统所有API接口的测试用例，包括文本聊天、语音识别、语音聊天等功能",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "系统健康检查",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "文本聊天API",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone_number\": \"13800138000\",\n  \"query\": \"请介绍一下你们的产品参数\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/chat",
+          "host": ["{{base_url}}"],
+          "path": ["chat"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "语音识别API",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "multipart/form-data",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "audio",
+              "type": "file",
+              "src": "/path/to/test_audio.wav"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/voice/recognize",
+          "host": ["{{base_url}}"],
+          "path": ["voice", "recognize"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "语音聊天API",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "multipart/form-data",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "phone_number",
+              "value": "13800138000",
+              "type": "text"
+            },
+            {
+              "key": "audio",
+              "type": "file",
+              "src": "/path/to/test_audio.wav"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/voice/chat",
+          "host": ["{{base_url}}"],
+          "path": ["voice", "chat"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "获取用户历史记录",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/user/13800138000/history",
+          "host": ["{{base_url}}"],
+          "path": ["user", "13800138000", "history"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "获取系统状态",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/system/status",
+          "host": ["{{base_url}}"],
+          "path": ["system", "status"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "重新加载RAG处理器",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/system/reload/rag",
+          "host": ["{{base_url}}"],
+          "path": ["system", "reload", "rag"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "测试用例集合",
+      "item": [
+        {
+          "name": "测试用例1: 常规问候",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"13800138001\",\n  \"query\": \"你好，我叫小明\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": ["{{base_url}}"],
+              "path": ["chat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "测试用例2: 天气查询",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"13800138002\",\n  \"query\": \"今天深圳的天气怎么样\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": ["{{base_url}}"],
+              "path": ["chat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "测试用例3: 产品咨询",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"13800138003\",\n  \"query\": \"请介绍一下智能办公本X9 Pro的功能\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": ["{{base_url}}"],
+              "path": ["chat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "测试用例4: 价格查询",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"13800138004\",\n  \"query\": \"这个产品的价格是多少\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": ["{{base_url}}"],
+              "path": ["chat"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8003",
+      "type": "string",
+      "description": "API服务器基础地址"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 预请求脚本",
+          "console.log('开始执行请求: ' + request.name);",
+          "",
+          "// 为语音API设置随机手机号",
+          "if (request.name.includes('语音')) {",
+          "  // 生成随机手机号",
+          "  var randomPhone = '13' + Math.floor(Math.random() * 1000000000).toString().padStart(9, '0');",
+          "  console.log('使用随机手机号: ' + randomPhone);",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 测试脚本",
+          "console.log('响应状态码: ' + response.code);",
+          "console.log('响应时间: ' + response.time + 'ms');",
+          "",
+          "// 验证响应状态",
+          "pm.test('状态码为200', function () {",
+          "    pm.response.to.have.status(200);",
+          "});",
+          "",
+          "// 验证响应格式",
+          "if (pm.response.headers.get('Content-Type').includes('application/json')) {",
+          "    pm.test('响应为JSON格式', function () {",
+          "        pm.response.to.be.json;",
+          "    });",
+          "    ",
+          "    // 验证响应数据结构",
+          "    const responseData = pm.response.json();",
+          "    ",
+          "    if (request.name.includes('聊天')) {",
+          "        pm.test('聊天响应包含必要字段', function () {",
+          "            pm.expect(responseData).to.have.property('response');",
+          "            pm.expect(responseData).to.have.property('intent');",
+          "            pm.expect(responseData).to.have.property('user_id');",
+          "        });",
+          "    }",
+          "    ",
+          "    if (request.name.includes('健康检查')) {",
+          "        pm.test('健康检查包含系统信息', function () {",
+          "            pm.expect(responseData).to.have.property('status');",
+          "            pm.expect(responseData).to.have.property('model');",
+          "        });",
+          "    }",
+          "}",
+          "",
+          "// 性能检查",
+          "pm.test('响应时间小于30秒', function () {",
+          "    pm.expect(response.time).to.be.below(30000);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "auth": null
+}

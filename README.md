@@ -64,10 +64,12 @@ CRM智能语音助手系统是一个集成了文本聊天、语音交互和客�
 **bash**
 
 ```
-# LLM配置
+# LLM及调用工具配置
 MODEL_NAME=deepseek-ai/DeepSeek-V2.5
 LLM_TEMPERATURE=0.3
-openai_api_key=sk-your-siliconflow-key
+openai_api_key=sk-your-openai_api-key
+TAVILY_API_KEY=your_tvly_api_key
+EMBEDDING_MODEL = 嵌入模型，如"BAAI/bge-m3"
 
 # 服务器端口
 SERVER_HTTP_PORT=5000
@@ -98,14 +100,21 @@ pip install -r requirements.txt
 
 # 主要依赖包
 # requirements.txt 应包含：
-flask==2.3.3
-gradio==4.14.0
-openai==1.3.0
+flask==3.1.2
+gradio==6.1.0
+gradio_client==2.0.1
 sqlite3
-python-dotenv==1.0.0
-uvicorn==0.24.0
+python-dotenv==1.2.1
+uvicorn==0.38.0
 fastapi==0.104.1
 aiohttp==3.9.1
+sentence-transformers==5.2.0
+chromadb==0.5.20
+langchain==0.3.27
+langchain-community==0.3.27
+angchain-core==0.3.81
+openai==1.51.0
+langchain-openai==0.3.33
 wave
 hmac
 hashlib
@@ -190,7 +199,6 @@ test\test_api_with_audio.py   运行后生成文件夹response_audio，并在文
 本地检索
 
 ![1767686601269](image/README/1767686601269.png)
-
 
 实时信息搜索
 

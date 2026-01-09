@@ -135,7 +135,6 @@ async def voice_chat_api():
         }), 500
 
 @app.route('/voice/recognize', methods=['POST'])
-@async_to_sync
 async def voice_recognize_api():
     """语音识别API"""
     try:

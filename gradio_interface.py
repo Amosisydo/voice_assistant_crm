@@ -121,7 +121,7 @@ class IntegratedCRMInterface:
             response = requests.get(f"{self.api_base_url}/health")
             if response.status_code == 200:
                 data = response.json()
-                status = f"**连接状态:** 正常\n\n**模型:** {data.get('model')}\n**语音支持:** {'已启用' if data.get('voice_enabled') else '未启用'}\n**Web搜索:** {'已启用' if data.get('web_search_enabled') else '未启用'}\n**RAG:** {'已启用' if data.get('rag_enabled') else '未启用'}"
+                status = f"**连接状态:** 正常\n\n**模型:** {data.get('model')}\n**语音支持:** {'已启用' if data.get('voice_enabled') else '未启用'}\n"
                 return status
             else:
                 return f"**连接异常:** {response.text}"
@@ -374,8 +374,11 @@ class IntegratedCRMInterface:
         return formatted
     
     def create_integrated_interface(self):
-        """创建整合的界面"""
-        with gr.Blocks(title="CRM聊天系统", theme=gr.themes.Soft()) as interface:
+        """创建整合的界面 - 适配Gradio 6.x"""
+        # 对于Gradio 6.x，theme参数需要放在launch方法中
+        import gradio as gr
+        
+        with gr.Blocks(title="CRM聊天系统") as interface:
             
             gr.Markdown("# CRM聊天系统")
             
@@ -389,11 +392,20 @@ class IntegratedCRMInterface:
                         placeholder="请输入手机号码"
                     )
                     
-                    chatbot = gr.Chatbot(
-                        height=400,
-                        label="对话记录",
-                        type="messages"
-                    )
+                    # 根据Gradio版本选择不同的Chatbot初始化方式
+                    if self.gradio_version.startswith("4."):
+                        # Gradio 4.x
+                        chatbot = gr.Chatbot(
+                            height=400,
+                            label="对话记录",
+                            type="messages"
+                        )
+                    else:
+                        # Gradio 6.x 移除了type参数
+                        chatbot = gr.Chatbot(
+                            height=400,
+                            label="对话记录"
+                        )
                     
                     # 输入方式标签页
                     with gr.Tabs():
@@ -512,13 +524,31 @@ class IntegratedCRMInterface:
             self.create_integrated_interface()
         
         from config import GRADIO_PORT
-        return self.app.launch(
-            server_name="0.0.0.0",
-            server_port=GRADIO_PORT,
-            share=share,
-            inbrowser=inbrowser,
-            quiet=quiet
-        )
+        
+        # 根据Gradio版本处理theme参数
+        import gradio as gr
+        
+        if self.gradio_version.startswith("4."):
+            # Gradio 4.x - theme在Blocks构造函数中
+            launch_kwargs = {
+                "server_name": "0.0.0.0",
+                "server_port": GRADIO_PORT,
+                "share": share,
+                "inbrowser": inbrowser,
+                "quiet": quiet
+            }
+        else:
+            # Gradio 6.x - theme在launch方法中
+            launch_kwargs = {
+                "server_name": "0.0.0.0",
+                "server_port": GRADIO_PORT,
+                "share": share,
+                "inbrowser": inbrowser,
+                "quiet": quiet,
+                "theme": gr.themes.Soft()  # 在launch方法中设置theme
+            }
+        
+        return self.app.launch(**launch_kwargs)
 
 def run_gradio_interface():
     """单独运行Gradio界面"""
